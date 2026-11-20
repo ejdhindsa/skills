@@ -1,0 +1,156 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #1E1F22; --surface: #2B2D30; --fg: #C2D1E0; --muted: #9399b2; --line: #33363D; --accent: #A5D0F8;
+  --good: #A2E4D2; --mid: #FFC66D; --bad: #E19B9B; --good-bg: #1F2A25; --mid-bg: #2A2820; --bad-bg: #2C2020;
+  --font-display: "Ubuntu Mono", monospace; --font-body: "Ubuntu Mono", monospace;
+  --font-mono: "MesloLGS NF", "JetBrains Mono", monospace; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.05rem; font-weight: 600; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+header { display: grid; gap: 6px; }
+.runs { display: flex; flex-wrap: wrap; gap: 8px; }
+.runs button { font: inherit; font-family: var(--font-mono); font-size: 0.8rem; padding: 6px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 6px; cursor: pointer; }
+.runs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.runs button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.summary { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.big { font-family: var(--font-mono); font-size: 2.6rem; font-weight: 500; line-height: 1; }
+.big small { font-size: 1rem; color: var(--muted); }
+.trend svg { width: 100%; height: 64px; display: block; }
+.cats { display: grid; gap: 10px; }
+.cat { display: grid; grid-template-columns: minmax(0, 11rem) 1fr 3rem; gap: 12px; align-items: center; }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: 4px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.list li { padding-left: 14px; position: relative; }
+.list li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 6px; height: 6px; border-radius: 50%; background: var(--dot, var(--muted)); }
+.strong li { --dot: var(--good); }
+.weak li { --dot: var(--bad); }
+.untested li { --dot: var(--muted); }
+.qs { display: grid; gap: 10px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+summary { list-style: none; cursor: pointer; padding: 12px 14px; display: grid; grid-template-columns: 2.6rem 1fr auto; gap: 12px; align-items: start; }
+summary::-webkit-details-marker { display: none; }
+.chip { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500; text-align: center; padding: 2px 0; border-radius: 5px; }
+.s-good { background: var(--good-bg); color: var(--good); }
+.s-mid { background: var(--mid-bg); color: var(--mid); }
+.s-bad { background: var(--bad-bg); color: var(--bad); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.tag { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.qbody { padding: 0 14px 14px calc(2.6rem + 26px); display: grid; gap: 8px; min-width: 0; }
+.qbody p { margin: 0; }
+.qbody code, .list code { font-family: var(--font-mono); font-size: 0.85em; overflow-wrap: anywhere; }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+@media (max-width: 560px) {
+  .summary { grid-template-columns: 1fr; }
+  .cat { grid-template-columns: 1fr 3rem; }
+  .cat .bar { grid-column: 1 / -1; grid-row: 2; }
+  summary { grid-template-columns: 2.6rem 1fr; }
+  .tags { grid-column: 2; justify-content: flex-start; }
+  .qbody { padding-left: 14px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="h1"></h1>
+    <div class="muted" id="sub"></div>
+  </header>
+  <nav class="runs" id="runs" aria-label="Sessions"></nav>
+  <section class="summary">
+    <div><div class="eyebrow">Overall</div><div class="big" id="overall"></div></div>
+    <div class="trend" id="trend"></div>
+  </section>
+  <section class="cats" id="cats" aria-label="Score by area"></section>
+  <section class="cols">
+    <div><h2>Solid</h2><ul class="list strong" id="strong"></ul></div>
+    <div><h2>Gaps</h2><ul class="list weak" id="weak"></ul></div>
+    <div><h2>Not tested</h2><ul class="list untested" id="untested"></ul></div>
+  </section>
+  <section class="qs">
+    <h2>Questions</h2>
+    <div class="qs" id="qs"></div>
+  </section>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CAT_NAMES = { "explain-back": "Explain-back", "what-why": "What & why", "system": "Surrounding system", "edge-tests": "Edge cases & tests", "alternatives": "Alternatives & review", "fundamentals": "Fundamentals", "redrill": "Old gaps" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const cls = v => v >= 8 ? "s-good" : v >= 5 ? "s-mid" : "s-bad";
+const colorVar = v => v >= 8 ? "var(--good)" : v >= 5 ? "var(--mid)" : "var(--bad)";
+const $ = id => document.getElementById(id);
+
+function list(el, items) {
+  el.innerHTML = items && items.length ? items.map(i => `<li>${md(i)}</li>`).join("") : `<li class="muted">None</li>`;
+}
+
+function trend(runs, active) {
+  const w = 400, h = 64, pad = 14;
+  const xs = i => runs.length === 1 ? w / 2 : pad + i * (w - 2 * pad) / (runs.length - 1);
+  const ys = v => h - pad - (v / 10) * (h - 2 * pad);
+  const pts = runs.map((r, i) => `${xs(i)},${ys(r.overall)}`).join(" ");
+  const dots = runs.map((r, i) => `<circle cx="${xs(i)}" cy="${ys(r.overall)}" r="${i === active ? 5 : 3.5}" fill="${i === active ? "var(--accent)" : "var(--muted)"}"><title>${esc(r.date)}: ${r.overall}</title></circle>`).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Overall score per session">
+    <line x1="0" x2="${w}" y1="${ys(8)}" y2="${ys(8)}" stroke="var(--line)" stroke-dasharray="3 4"/>
+    <line x1="0" x2="${w}" y1="${ys(5)}" y2="${ys(5)}" stroke="var(--line)" stroke-dasharray="3 4"/>
+    ${runs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>` : ""}${dots}</svg>
+    <div class="muted mono" style="font-size:.75rem">${runs.length} session${runs.length > 1 ? "s" : ""} on this ticket · dashed lines at 5 and 8</div>`;
+}
+
+function render(idx) {
+  const run = DATA.runs[idx];
+  $("runs").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", i === idx));
+  $("sub").textContent = `${run.date} · ${run.repos.join(", ")} · branch ${run.branch} @ ${run.head}`;
+  $("overall").innerHTML = `${run.overall.toFixed(1)}<small>/10</small>`;
+  $("trend").innerHTML = trend(DATA.runs, idx);
+
+  const groups = {};
+  const all = [{ category: "explain-back", score: run.explainBack.score }, ...run.questions];
+  all.forEach(q => (groups[q.category] ||= []).push(q.score));
+  $("cats").innerHTML = Object.entries(groups).map(([k, v]) => {
+    const avg = v.reduce((a, b) => a + b, 0) / v.length;
+    return `<div class="cat"><span>${esc(CAT_NAMES[k] || k)} <span class="muted mono">×${v.length}</span></span>
+      <div class="bar"><span style="width:${avg * 10}%;background:${colorVar(avg)}"></span></div>
+      <span class="mono">${avg.toFixed(1)}</span></div>`;
+  }).join("");
+
+  list($("strong"), run.strong);
+  list($("weak"), run.weak);
+  list($("untested"), run.notTested);
+
+  const eb = run.explainBack;
+  const items = [{ n: 0, category: "explain-back", mode: "closed", question: "Explain the whole change as you would to a reviewer.", answerSummary: eb.answerSummary, score: eb.score, hints: 0, gap: eb.gap, readNext: eb.readNext || [] }, ...run.questions];
+  $("qs").innerHTML = `<h2>Questions</h2>` + items.map(q => `
+    <details${q.score < 8 ? " open" : ""}>
+      <summary>
+        <span class="chip ${cls(q.score)}">${q.score}</span>
+        <span>${md(q.question)}</span>
+        <span class="tags"><span class="tag">${esc(CAT_NAMES[q.category] || q.category)}</span><span class="tag">${q.mode === "open" ? "open book" : "closed book"}</span>${q.hints ? `<span class="tag">${q.hints} hint${q.hints > 1 ? "s" : ""}</span>` : ""}${q.retestOf ? `<span class="tag">re-test of Q${q.retestOf}</span>` : ""}</span>
+      </summary>
+      <div class="qbody">
+        ${q.answerSummary ? `<div><div class="label">Your answer</div><p>${md(q.answerSummary)}</p></div>` : ""}
+        ${q.gap ? `<div><div class="label">What was missing</div><p>${md(q.gap)}</p></div>` : ""}
+        ${q.readNext && q.readNext.length ? `<div><div class="label">Read next</div><p>${q.readNext.map(md).join("<br>")}</p></div>` : ""}
+      </div>
+    </details>`).join("");
+}
+
+$("eyebrow").textContent = DATA.ticket;
+$("h1").textContent = DATA.title || DATA.ticket;
+$("runs").innerHTML = DATA.runs.map((r, i) => `<button type="button" id="run-${i}">${esc(r.date)} · ${r.overall.toFixed(1)}</button>`).join("");
+$("runs").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => render(i)));
+render(DATA.runs.length - 1);
+</script>
