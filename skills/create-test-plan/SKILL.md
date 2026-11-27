@@ -1,7 +1,7 @@
 ---
 name: create-test-plan
 description: Builds a local test plan for a branch's changes. Reads the diff against a base branch you name, the Jira ticket (with its comments, linked issues and epic) and earlier test plans, and asks only what the code can't answer. Publishes an interactive runbook page with commands, expected output, pass/fail and notes per step, and a values panel. The page also builds paste-ready prompts that have an agent run the plan or diagnose failed steps. Works on one repo, or on several git repos in direct subdirectories. Only run when the user types /create-test-plan.
-argument-hint: [repo-name...] [--base <branch>] [--ticket <KEY>]
+argument-hint: [repo-name...] [--base <branch>] [--ticket <KEY>] [--full-run | --no-run]
 disable-model-invocation: true
 ---
 
@@ -205,18 +205,28 @@ rebuild until it passes. Fix every warning it prints too: a test step without `c
 the fix prompt, and an undeclared terminal confuses the agent that runs the plan.
 Never hand-edit the HTML.
 
-## Phase 8: dry run
+## Phase 8: check the plan (dry run)
 
-Ask with AskUserQuestion. Each option lists exactly what it writes, by name: databases and ports,
-tables, Redis keys and queues, processes it starts, files under `$DATA`.
-- **None:** publish from the code alone. Add a "Read this first" note saying that the commands
-  and expected values come from reading the code and have never run, so the first run may find
-  wrong expectations rather than bugs.
-- **Partial:** step 0, plus every check that reads without writing (SELECTs, Redis reads, GET
-  requests, config checks). No nodes started unless a read needs one.
-- **Full:** start the mocks and nodes in the background (Bash `run_in_background`), run every part
-  in order with the env notes' headless method for REPL steps, run every reset, then stop
-  everything the dry run started.
+The dry run proves the plan's commands and expectations, not the code. Testing the code is the
+next run of the plan, by the user or by an agent through the page's run prompt, so don't do that
+work twice by default.
+
+- **Default, partial. Don't ask.** Run step 0 and every step that only reads: specs, lint,
+  SELECTs, Redis reads, GET requests, version comparisons, greps. Start no node and write nothing.
+  Skip every step that writes or needs a running node, and name the skipped steps in your reply.
+- **`--no-run`:** run nothing. Add a "Read this first" note saying that the commands and expected
+  values come from reading the code and have never run, so the first run may find wrong
+  expectations rather than bugs.
+- **`--full-run`:** first list exactly what it writes, by name (databases and ports, tables,
+  Redis keys and queues, processes it starts, files under `$DATA`) and wait for the user's yes.
+  Then hand the run to a fresh general-purpose subagent, so the run doesn't carry this session's
+  diff and file reads in every call. Give it the paths of `plan.json` and the env notes and the
+  rules of the page's run prompt: local services only; no code or env file changes; long-running
+  processes in the background, stopped at the end; a step passes only when every `expect` line
+  matches; after a failure continue and mark dependent steps blocked; run every reset; print no
+  secrets; fix nothing. It ends its report with the page's results block,
+  `{"plan": "<meta.id>", "results": [{"step": "<num>", "result": "pass|fail|skip|blocked", "saw": "..."}]}`,
+  and you work from that.
 
 While running:
 - A step whose command or expectation is wrong: fix the step in the JSON.
@@ -224,8 +234,8 @@ While running:
   the user in the final reply.
 - An environment surprise (a crash on start, a slow timeout, a stuck job): add a `troubleshooting`
   row.
-- Set `meta.dryRun` (date, commit, scope, outcome in one line, e.g. "every step matched" or
-  "2 steps fail: B3, C1").
+- Set `meta.dryRun` (date, commit, scope `partial` or `full`, outcome in one line, e.g. "every
+  step matched" or "2 steps fail: B3, C1"). With `--no-run`, leave it null.
 
 Afterwards, propose additions to `$DATA/env/<repo>.md`: new known errors, commands that worked,
 corrected ports. Show them and write them only after the user approves. Rebuild the page.
@@ -242,9 +252,10 @@ corrected ports. Show them and write them only after the user approves. Rebuild 
 Reply with:
 - the link
 - the coverage gaps from `checkFirst`
-- the dry-run result, and code problems it found
+- the dry-run result: which steps ran, which were skipped, and code problems it found
 - what the plan does not cover, and why
 
 Say that the page is private until they share it with reviewers. Say that "Copy run prompt" hands
-the plan to an agent, and that "Copy fix prompt" turns failed steps, their notes and the ticked
-causes into a diagnosis prompt.
+the plan to an agent in a Claude Code session at the repo root, that "Paste agent results" loads
+that agent's report back into the page, and that "Copy fix prompt" turns failed steps, their notes
+and the ticked causes into a diagnosis prompt.

@@ -73,10 +73,10 @@ textarea { width: 100%; min-height: 2.2em; resize: vertical; background: var(--b
 .tools { display: flex; flex-direction: column; gap: 6px; }
 .tool { background: transparent; border: 1px solid var(--border); color: var(--link); padding: 4px 10px; text-align: left; }
 .tool.danger { color: var(--bad); }
-#promptBox { display: flex; flex-direction: column; gap: 4px; }
-#promptBox .box-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.85rem; }
-#promptBox .box-head button { background: transparent; border: 0; color: var(--link); padding: 0; }
-#promptBox textarea { min-height: 14em; font: 0.72rem/1.4 var(--font-code); }
+#promptBox, #importBox { display: flex; flex-direction: column; gap: 4px; }
+.box-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.85rem; }
+.box-head button { background: transparent; border: 0; color: var(--link); padding: 0; }
+#promptBox textarea, #importBox textarea { min-height: 14em; font: 0.72rem/1.4 var(--font-code); }
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); }
 table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -115,8 +115,16 @@ tr:last-child td { border-bottom: 0; }
     <div class="tools">
       <button type="button" class="tool" id="copyResults">Copy results as Markdown</button>
       <button type="button" class="tool" id="copyRun">Copy run prompt</button>
+      <button type="button" class="tool" id="importBtn">Paste agent results</button>
       <button type="button" class="tool" id="copyFix">Copy fix prompt</button>
       <button type="button" class="tool danger" id="clearBtn">Clear results and values</button>
+    </div>
+    <div id="importBox" hidden>
+      <div class="box-head"><span>Paste the agent's report</span><button type="button" id="importClose">Hide</button></div>
+      <label for="importText" hidden>Agent report</label>
+      <textarea id="importText" placeholder="Paste the whole report from the run prompt, or only its json block"></textarea>
+      <button type="button" class="tool" id="importApply">Import results</button>
+      <p class="progress" id="importMsg"></p>
     </div>
     <div id="promptBox" hidden>
       <div class="box-head"><span id="boxTitle"></span><button type="button" id="boxClose">Hide</button></div>
@@ -443,13 +451,12 @@ tr:last-child td { border-bottom: 0; }
     L.push("Rules:");
     L.push("- Run everything on this machine against the local services named below. Never connect to a remote or production host, never deploy, never commit or push.");
     L.push("- Do not change application code or env files. Start services with the overrides the commands show.");
+    L.push("- Start long-running processes (nodes, mocks, dev servers) in the background, confirm each is up before the steps that need it, and stop everything you started when you finish.");
     L.push("- A step passes only when every Expect line matches. Quote the exact log line or value you saw.");
     L.push("- When a step fails, record it and continue. Mark later steps in the same part that depend on it as blocked. Run each part's reset step even when the part failed.");
     L.push("- Replace each <name> placeholder with the value captured from the step named under Values.");
     L.push("- Never print secrets (tokens, passwords, credentials, private links) in your report.");
     L.push("- Do not fix anything. Report only.");
-    L.push("");
-    L.push("Report: a table of Step | Result (pass, fail, skip, blocked) | What you saw. Then, for each failed step, your best guess at the cause with the evidence.");
     L.push("");
     L.push("Environment: " + (M.env || "see the notes below"));
     if (M.agentNotes) L.push("Running interactive steps headless: " + M.agentNotes);
@@ -460,7 +467,7 @@ tr:last-child td { border-bottom: 0; }
       L.push("", "## " + p.title);
       if (p.needsHtml) L.push("Needs: " + plain(p.needsHtml));
       STEPS.filter(function (s) { return s.part === p.id; }).forEach(function (s) {
-        L.push("", "### " + stepLabel(s) + (s.reset ? " (reset)" : ""));
+        L.push("", "### " + stepRef(s) + " " + s.title + (s.reset ? " (reset)" : ""));
         L = L.concat(stepBody(s, ""));
       });
     });
@@ -468,7 +475,54 @@ tr:last-child td { border-bottom: 0; }
       L.push("", "## Known problems");
       P.troubleshooting.forEach(function (t) { L.push("- You see: " + plain(t.seeHtml) + ". Cause: " + plain(t.causeHtml) + ". Fix: " + plain(t.fixHtml)); });
     }
+    var first = STEPS.filter(function (s) { return parts.some(function (p) { return p.id === s.part; }); })[0];
+    L.push("", "## Report");
+    L.push("A table of Step | Result (pass, fail, skip, blocked) | What you saw. Then, for each failed step, your best guess at the cause with the evidence.");
+    L.push("End the report with one fenced json block in exactly this shape, one entry per step above, so the results can be imported into the test plan page:");
+    L.push("```json");
+    L.push(JSON.stringify({ plan: M.id, results: [{ step: first ? stepRef(first) : "0", result: "pass", saw: "the exact log line or value you saw" }] }));
+    L.push("```");
     return L.join("\n");
+  }
+
+  function stepRef(s) { return s.num || s.id; }
+  var BY_REF = {};
+  STEPS.forEach(function (s) { BY_REF[s.id.toLowerCase()] = s; if (s.num) BY_REF[String(s.num).toLowerCase()] = s; });
+
+  function parseResults(text) {
+    var blocks = [], re = /```(?:json)?\s*([\s\S]*?)```/g, m;
+    while ((m = re.exec(text))) blocks.push(m[1]);
+    if (!blocks.length) blocks.push(text);
+    for (var i = blocks.length - 1; i >= 0; i--) {
+      var b = blocks[i], start = b.indexOf("{"), end = b.lastIndexOf("}");
+      if (start < 0 || end <= start) continue;
+      try { var o = JSON.parse(b.slice(start, end + 1)); if (o && Array.isArray(o.results)) return o; } catch (e) {}
+    }
+    return null;
+  }
+
+  function importResults(text) {
+    var o = parseResults(text);
+    if (!o) return "No results found. Paste the agent's report, including its json block.";
+    if (o.plan && o.plan !== M.id) return "These results are for plan " + o.plan + " and this page is " + M.id + ". Nothing was imported.";
+    var c = { pass: 0, fail: 0, skip: 0 }, missed = [];
+    o.results.forEach(function (r) {
+      var s = r && BY_REF[String(r.step == null ? "" : r.step).trim().toLowerCase()];
+      var v = String((r && r.result) || "").trim().toLowerCase();
+      if (!s || ["pass", "fail", "skip", "blocked"].indexOf(v) < 0) { missed.push(String(r && r.step)); return; }
+      var saw = String(r.saw || "").trim();
+      if (v === "blocked") { v = "skip"; saw = "Blocked. " + saw; }
+      state.results[s.id] = { v: v, rev: s.rev };
+      if (saw) {
+        var line = "Agent run: " + saw, cur = String(state.notes[s.id] || "");
+        if (cur.indexOf(line) < 0) state.notes[s.id] = cur ? cur + "\n" + line : line;
+        cards[s.id].querySelector("textarea").value = state.notes[s.id];
+      }
+      var tag = cards[s.id].querySelector(".tag.stale"); if (tag) tag.remove();
+      c[v]++; paintStep(s);
+    });
+    save(); updateProgress();
+    return "Imported " + (c.pass + c.fail + c.skip) + " results: " + c.pass + " pass, " + c.fail + " fail, " + c.skip + " skipped or blocked." + (missed.length ? " Not matched: " + missed.join(", ") + "." : "");
   }
 
   function fixPrompt() {
@@ -526,6 +580,10 @@ tr:last-child td { border-bottom: 0; }
   bRun.addEventListener("click", function () { exportText("Run prompt", runPrompt(), bRun, "No part is ticked 'In run prompt'."); });
   bFix.addEventListener("click", function () { exportText("Fix prompt", fixPrompt(), bFix, "No failed step is included. Mark a step Fail to add it."); });
   document.getElementById("boxClose").addEventListener("click", function () { box.hidden = true; });
+  var importBox = document.getElementById("importBox"), importText = document.getElementById("importText"), importMsg = document.getElementById("importMsg");
+  document.getElementById("importBtn").addEventListener("click", function () { importBox.hidden = false; importText.focus(); });
+  document.getElementById("importClose").addEventListener("click", function () { importBox.hidden = true; });
+  document.getElementById("importApply").addEventListener("click", function () { importMsg.textContent = importResults(importText.value); });
 
   var clearBtn = document.getElementById("clearBtn"), armed = false;
   clearBtn.addEventListener("click", function () {
@@ -534,6 +592,7 @@ tr:last-child td { border-bottom: 0; }
     state = { values: {}, results: {}, notes: {}, causes: {}, inFix: {}, runParts: {} }; save();
     document.querySelectorAll("#fields input").forEach(function (i) { i.value = ""; });
     document.querySelectorAll(".step textarea").forEach(function (t) { t.value = ""; });
+    importText.value = ""; importMsg.textContent = "";
     document.querySelectorAll(".group-title input").forEach(function (b) { b.checked = true; });
     STEPS.forEach(paintStep); renderDynamic(); updateProgress();
   });

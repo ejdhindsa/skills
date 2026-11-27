@@ -36,6 +36,8 @@ Run it inside a repo on your feature branch:
 /create-test-plan --base develop           # skips that question
 /create-test-plan --ticket PROJ-123        # when the branch name has no ticket key
 /create-test-plan api web --base develop   # run from a folder of repos: one plan across them
+/create-test-plan --full-run               # also run every step once before publishing
+/create-test-plan --no-run                 # run nothing, not even the read-only checks
 ```
 
 What happens:
@@ -48,7 +50,9 @@ What happens:
    (lint and specs), setup, independent parts with reset steps, regression and rollout checks, and
    cleanup. A ticket coverage map lists scope items with no change, and changes the ticket doesn't
    mention.
-4. It offers a dry run (none, read-only, or full) and lists what each option writes before it runs.
+4. It checks the plan by running step 0 (lint and specs) and every step that only reads. It starts
+   nothing and writes nothing. With `--full-run` it lists what a full run would write, waits for your
+   yes, then runs every step in a separate agent.
 5. It publishes the page as a private claude.ai artifact. Share it with reviewers from the page's
    Share menu.
 
@@ -57,10 +61,14 @@ you paste into its side panel. Its buttons copy:
 
 - **Results as Markdown**, for the PR or the ticket.
 - **A run prompt**, which hands the plan, or the parts you tick, to an agent that runs every step
-  and reports what it saw.
+  and reports what it saw. Paste it into a Claude Code session started at the repo root.
 - **A fix prompt**, which hands the failed steps, your notes and the suspected causes you ticked to
   an agent. The agent reproduces each failure, finds the cause and proposes a fix before editing
   anything.
+
+The agent's report ends with a block of results. Paste the report into **Paste agent results** and
+the page records pass, fail or skip and the agent's notes for every step, so the fix prompt works
+straight from the agent's run.
 
 Run the command again on the same ticket after new commits and it updates the same plan and page.
 Results you recorded on unchanged steps stay in your browser.
@@ -90,5 +98,5 @@ use local services only.
 
 Measured once: a 9-file change in one repo, the first run in that repo, no dry run. That run took
 32 model calls and about 6 minutes, and cost about $1.20 at Claude Sonnet 5.5 API rates. Bigger
-diffs and more repos cost more. A full dry run is the most expensive part, so pick "none" or
-"read-only" when you only need the plan.
+diffs and more repos cost more. `--full-run` is the most expensive option: on a larger plan, a full
+run took 82 model calls on its own.
