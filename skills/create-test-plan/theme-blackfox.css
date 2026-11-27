@@ -1,0 +1,10 @@
+:root {
+  color-scheme: dark;
+  --bg: #1E1F22; --surface: #2B2D30; --raised: #393D3F; --border: #33363D;
+  --text: #C2D1E0; --muted: #9399b2; --faint: #6c7086;
+  --accent: #A5D0F8; --link: #6A95EB; --good: #A2E4D2; --teal: #47C9A7;
+  --warn: #FFC66D; --bad: #E19B9B; --orange: #CC7832; --mauve: #dcb8d5;
+  --add: #1F2A25; --change: #2A2820; --delete: #2C2020;
+  --font-text: "Ubuntu Mono", monospace;
+  --font-code: "MesloLGS NF", "JetBrains Mono", monospace;
+}

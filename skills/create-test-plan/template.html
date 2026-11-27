@@ -1,0 +1,544 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/*__THEME__*/
+</style>
+<style>
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text); font: 16px/1.5 var(--font-text); margin: 0;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+}
+a { color: var(--link); }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
+main { min-width: 0; display: flex; flex-direction: column; gap: 32px; }
+aside { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } aside { position: static; order: -1; max-height: none; } }
+h1, h2, h3 { margin: 0; font-weight: 700; text-wrap: balance; }
+h1 { font-size: 1.8rem; color: var(--accent); }
+h2 { font-size: 1.3rem; color: var(--accent); }
+h3 { font-size: 1.05rem; }
+p { margin: 0; max-width: 75ch; }
+code { font-family: var(--font-code); font-size: 0.85em; background: var(--raised); padding: 0 4px; border-radius: 3px; overflow-wrap: anywhere; }
+header, section, .notes, .steps { display: flex; flex-direction: column; gap: 12px; }
+[hidden] { display: none !important; }
+.meta { display: flex; flex-direction: column; gap: 2px; color: var(--muted); }
+.meta b { color: var(--text); font-weight: 400; overflow-wrap: anywhere; }
+.note { border-left: 3px solid var(--warn); background: var(--change); padding: 8px 12px; }
+.note b { color: var(--warn); }
+.note.bad { border-color: var(--bad); background: var(--delete); }
+.note.bad b { color: var(--bad); }
+.group-title { display: flex; align-items: baseline; gap: 6px 14px; border-bottom: 1px solid var(--border); padding-bottom: 4px; flex-wrap: wrap; }
+.group-title .count { color: var(--faint); }
+.group-title label { margin-left: auto; color: var(--muted); font-size: 0.9rem; display: flex; gap: 6px; align-items: center; }
+.needs { color: var(--muted); }
+.step { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.step[data-result="pass"] { border-left-color: var(--teal); }
+.step[data-result="fail"] { border-left-color: var(--bad); }
+.step[data-result="skip"] { border-left-color: var(--faint); }
+.step-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.num { font-family: var(--font-code); color: var(--faint); margin-right: 8px; font-size: 0.9em; }
+.tag { font-size: 0.8rem; font-weight: 400; color: var(--mauve); border: 1px solid var(--border); padding: 0 6px; margin-left: 8px; white-space: nowrap; }
+.tag.stale { color: var(--warn); }
+.why { color: var(--muted); }
+.cmd { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.term { font-family: var(--font-code); font-size: 0.75rem; color: var(--mauve); }
+.code-row { display: flex; background: var(--bg); border: 1px solid var(--border); min-width: 0; }
+pre { margin: 0; padding: 8px 10px; font: 0.8rem/1.5 var(--font-code); overflow-x: auto; flex: 1; min-width: 0; white-space: pre; }
+.copy { flex: none; background: transparent; border: 0; border-left: 1px solid var(--border); color: var(--link); padding: 0 10px; font-size: 0.85rem; }
+ol.do { margin: 0; padding-left: 22px; }
+.expect { border-top: 1px dashed var(--border); padding-top: 8px; }
+.expect-title { color: var(--good); font-size: 0.85rem; }
+.expect ul { margin: 4px 0 0; padding-left: 18px; }
+.covers { color: var(--faint); font: 0.75rem/1.4 var(--font-code); overflow-wrap: anywhere; }
+.result { display: flex; gap: 6px; }
+.result button { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 1px 10px; }
+.result button[aria-pressed="true"][data-v="pass"] { background: var(--add); color: var(--good); border-color: var(--teal); }
+.result button[aria-pressed="true"][data-v="fail"] { background: var(--delete); color: var(--bad); border-color: var(--bad); }
+.result button[aria-pressed="true"][data-v="skip"] { background: var(--raised); color: var(--text); }
+.failbox { border-top: 1px dashed var(--bad); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.failbox .hint { color: var(--muted); font-size: 0.9rem; }
+.failbox label { display: flex; gap: 8px; align-items: baseline; }
+textarea { width: 100%; min-height: 2.2em; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--border); font: 0.85rem var(--font-text); padding: 4px 8px; }
+.panel { background: var(--surface); border: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.panel p { color: var(--muted); font-size: 0.9rem; }
+.field { display: flex; flex-direction: column; gap: 2px; }
+.field label { color: var(--muted); font-size: 0.85rem; }
+.field input { font: 0.8rem var(--font-code); padding: 4px 6px; background: var(--bg); color: var(--text); border: 1px solid var(--border); width: 100%; }
+.field small { color: var(--faint); font-size: 0.75rem; }
+.progress { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tools { display: flex; flex-direction: column; gap: 6px; }
+.tool { background: transparent; border: 1px solid var(--border); color: var(--link); padding: 4px 10px; text-align: left; }
+.tool.danger { color: var(--bad); }
+#promptBox { display: flex; flex-direction: column; gap: 4px; }
+#promptBox .box-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.85rem; }
+#promptBox .box-head button { background: transparent; border: 0; color: var(--link); padding: 0; }
+#promptBox textarea { min-height: 14em; font: 0.72rem/1.4 var(--font-code); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 400; }
+tr:last-child td { border-bottom: 0; }
+.st-covered { color: var(--good); }
+.st-partial { color: var(--warn); }
+.st-untested { color: var(--bad); }
+</style>
+
+<div class="wrap">
+<main>
+  <header id="header"></header>
+  <section id="checkFirst" hidden><h2>Check before testing</h2><div class="notes"></div></section>
+  <section id="readFirst" hidden><h2>Read this first</h2><div class="notes"></div></section>
+  <section id="coverage" hidden>
+    <h2>Ticket coverage</h2>
+    <div class="table-wrap"><table><thead><tr><th>Ticket scope</th><th>Steps</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <div id="parts" class="notes" style="gap:32px"></div>
+  <section id="dryRunFindings" hidden>
+    <h2>Found during the dry run</h2>
+    <div class="table-wrap"><table><thead><tr><th>What</th><th>Where</th><th>Impact</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section id="trouble" hidden>
+    <h2>If something goes wrong</h2>
+    <div class="table-wrap"><table><thead><tr><th>You see</th><th>Cause</th><th>Fix</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</main>
+<aside>
+  <div class="panel">
+    <h2>Values from your run</h2>
+    <p>Paste values from the logs as you get them and the commands update. Results, notes and values stay in this browser only.</p>
+    <div id="fields" class="notes"></div>
+    <div class="progress" id="progress"></div>
+    <div class="tools">
+      <button type="button" class="tool" id="copyResults">Copy results as Markdown</button>
+      <button type="button" class="tool" id="copyRun">Copy run prompt</button>
+      <button type="button" class="tool" id="copyFix">Copy fix prompt</button>
+      <button type="button" class="tool danger" id="clearBtn">Clear results and values</button>
+    </div>
+    <div id="promptBox" hidden>
+      <div class="box-head"><span id="boxTitle"></span><button type="button" id="boxClose">Hide</button></div>
+      <label for="boxText" hidden>Copied text</label>
+      <textarea id="boxText" readonly></textarea>
+    </div>
+  </div>
+</aside>
+</div>
+
+<script id="plan-data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var P = JSON.parse(document.getElementById("plan-data").textContent);
+  var M = P.meta;
+  var KEY = "create-test-plan:" + M.id;
+  var DAY = 86400000;
+  var FIELDS = P.fields || [];
+  var PARTS = P.parts || [];
+  var STEPS = P.steps || [];
+  var FIELD = {}, PART = {}, STEP = {};
+  FIELDS.forEach(function (f) { FIELD[f.id] = f; });
+  PARTS.forEach(function (p) { PART[p.id] = p; });
+  STEPS.forEach(function (s) { STEP[s.id] = s; });
+
+  var state = { values: {}, results: {}, notes: {}, causes: {}, inFix: {}, runParts: {} };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && typeof saved === "object") {
+      Object.keys(state).forEach(function (k) { if (saved[k] && typeof saved[k] === "object") state[k] = saved[k]; });
+    }
+  } catch (e) {}
+  // A result recorded against an older version of a step no longer applies to it.
+  var stale = {};
+  Object.keys(state.results).forEach(function (id) {
+    var r = state.results[id];
+    if (STEP[id] && r && r.rev === STEP[id].rev) return;
+    if (STEP[id]) stale[id] = true;
+    delete state.results[id]; delete state.causes[id]; delete state.inFix[id];
+  });
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  function defaultOf(f) {
+    if (!f || f["default"] == null) return "";
+    var m = /^([+-])(\d+)d$/.exec(String(f["default"]));
+    if (!m) return String(f["default"]);
+    var days = (m[1] === "-" ? -1 : 1) * Number(m[2]);
+    return new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
+  }
+  function val(id) { var v = String(state.values[id] || "").trim(); return v || defaultOf(FIELD[id]) || "<" + id + ">"; }
+  function fill(t) { return String(t == null ? "" : t).replace(/\{\{(\w+)\}\}/g, function (m, n) { return FIELD[n] ? val(n) : m; }); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function rich(tag, cls, h) { var e = el(tag, cls); e.innerHTML = h || ""; return e; }
+  function plain(h) { var d = document.createElement("div"); d.innerHTML = h || ""; return d.textContent.replace(/\s+/g, " ").trim(); }
+  function resultOf(id) { return state.results[id] ? state.results[id].v : ""; }
+  function counted(s) { return PART[s.part] && PART[s.part].kind !== "cleanup"; }
+  function stepLabel(s) { return s.num ? s.num + " " + s.title : s.title; }
+
+  // Header
+  var header = document.getElementById("header");
+  header.appendChild(el("h1", null, M.title));
+  header.appendChild(rich("p", null, M.summaryHtml));
+  var meta = el("div", "meta");
+  function metaLine(label, value, href) {
+    var line = el("span"); line.appendChild(document.createTextNode(label + " "));
+    var b = el("b");
+    if (href) { var a = el("a", null, value); a.href = href; a.target = "_blank"; a.rel = "noopener"; b.appendChild(a); } else b.textContent = value;
+    line.appendChild(b); meta.appendChild(line);
+  }
+  if (M.ticket && (M.ticket.key || M.ticket.summary)) metaLine("Ticket", [M.ticket.key, M.ticket.summary].filter(Boolean).join(": "), M.ticket.url);
+  (M.repos || []).forEach(function (r) {
+    metaLine(r.name, r.branch + " at " + r.head + " against " + r.base + " (merge-base " + r.mergeBase + ")" + (r.uncommitted ? ", including uncommitted changes" : ""));
+  });
+  metaLine("Dry run", M.dryRun ? M.dryRun.date + " on " + M.dryRun.commit + ", " + M.dryRun.scope + ": " + M.dryRun.outcome : "not run");
+  if (M.time) metaLine("Time", M.time);
+  if (M.updated) metaLine("Updated", M.updated);
+  header.appendChild(meta);
+
+  // Notes
+  function noteEl(title, h, bad) {
+    var n = el("div", bad ? "note bad" : "note");
+    if (title) { n.appendChild(el("b", null, title)); n.appendChild(document.createTextNode(" ")); }
+    var span = el("span"); span.innerHTML = h || ""; n.appendChild(span);
+    return n;
+  }
+  var check = P.checkFirst || [];
+  if (check.length) {
+    var cf = document.getElementById("checkFirst"); cf.hidden = false;
+    check.forEach(function (c) { cf.querySelector(".notes").appendChild(noteEl(null, c.html, c.kind === "gap")); });
+  }
+  var notes = (P.notes || []).slice();
+  if (M.terminals && M.terminals.length) {
+    notes.unshift({ title: "Terminals.", html: M.terminals.map(function (t) { return "<code>" + t.id.replace(/</g, "&lt;") + "</code> " + String(t.what).replace(/</g, "&lt;"); }).join(", ") + "." });
+  }
+  if (notes.length) {
+    var rf = document.getElementById("readFirst"); rf.hidden = false;
+    notes.forEach(function (n) { rf.querySelector(".notes").appendChild(noteEl(n.title, n.html, n.kind === "bad")); });
+  }
+
+  // Coverage
+  var cov = P.coverage || [];
+  if (cov.length) {
+    var cs = document.getElementById("coverage"); cs.hidden = false;
+    var cb = cs.querySelector("tbody");
+    cov.forEach(function (c) {
+      var tr = el("tr");
+      tr.appendChild(el("td", null, c.item));
+      var td = el("td");
+      (c.steps || []).forEach(function (id, i) {
+        if (i) td.appendChild(document.createTextNode(", "));
+        var a = el("a", null, STEP[id] ? (STEP[id].num || STEP[id].title) : id); a.href = "#" + id; td.appendChild(a);
+      });
+      tr.appendChild(td);
+      var st = el("td", "st-" + c.status, c.status + (c.note ? ": " + c.note : ""));
+      tr.appendChild(st);
+      cb.appendChild(tr);
+    });
+  }
+
+  // Parts and steps
+  var codeBlocks = [], textBlocks = [], cards = {};
+  function copyText(text, btn, pre) {
+    var label = btn.textContent;
+    function done(t) { btn.textContent = t; setTimeout(function () { btn.textContent = label; }, 1200); }
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents(pre);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      done("Selected");
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done("Copied"); }, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+
+  function renderStep(s, container) {
+    var card = el("div", "step"); card.id = s.id; cards[s.id] = card;
+    var head = el("div", "step-head");
+    var h = el("h3");
+    if (s.num) h.appendChild(el("span", "num", s.num));
+    h.appendChild(document.createTextNode(s.title));
+    if (s.reset) h.appendChild(el("span", "tag", "reset"));
+    if (stale[s.id]) h.appendChild(el("span", "tag stale", "changed since your last result"));
+    head.appendChild(h);
+    var res = el("div", "result"); res.setAttribute("role", "group"); res.setAttribute("aria-label", "Result for " + stepLabel(s));
+    ["pass", "fail", "skip"].forEach(function (v) {
+      var b = el("button", null, v.charAt(0).toUpperCase() + v.slice(1)); b.type = "button"; b.dataset.v = v;
+      b.addEventListener("click", function () {
+        if (resultOf(s.id) === v) delete state.results[s.id]; else state.results[s.id] = { v: v, rev: s.rev };
+        save(); paintStep(s); updateProgress();
+      });
+      res.appendChild(b);
+    });
+    head.appendChild(res);
+    card.appendChild(head);
+    var why = el("p", "why"); textBlocks.push({ node: why, text: s.why }); card.appendChild(why);
+    (s.cmds || []).forEach(function (c) {
+      var wrap = el("div", "cmd"); wrap.appendChild(el("span", "term", c.term));
+      var row = el("div", "code-row"); var pre = el("pre"); pre.tabIndex = 0;
+      codeBlocks.push({ node: pre, text: c.text });
+      var btn = el("button", "copy", "Copy"); btn.type = "button"; btn.setAttribute("aria-label", "Copy command for " + c.term);
+      btn.addEventListener("click", function () { copyText(pre.textContent, btn, pre); });
+      row.appendChild(pre); row.appendChild(btn); wrap.appendChild(row); card.appendChild(wrap);
+    });
+    if (s["do"] && s["do"].length) {
+      var ol = el("ol", "do");
+      s["do"].forEach(function (d) { var li = el("li"); textBlocks.push({ node: li, text: d }); ol.appendChild(li); });
+      card.appendChild(ol);
+    }
+    var ex = el("div", "expect"); ex.appendChild(el("div", "expect-title", "Expect"));
+    var ul = el("ul");
+    (s.expect || []).forEach(function (x) { var li = el("li"); textBlocks.push({ node: li, text: x }); ul.appendChild(li); });
+    ex.appendChild(ul); card.appendChild(ex);
+    if (s.covers && s.covers.length) {
+      card.appendChild(el("div", "covers", "Covers: " + s.covers.map(function (c) { return (c.repo ? c.repo + "/" : "") + c.file + (c.symbol ? " (" + c.symbol + ")" : ""); }).join(", ")));
+    }
+    var fb = el("div", "failbox"); fb.dataset.role = "failbox";
+    var inFix = el("label"); var inFixBox = el("input"); inFixBox.type = "checkbox";
+    inFixBox.addEventListener("change", function () { state.inFix[s.id] = inFixBox.checked; save(); updateProgress(); });
+    inFix.appendChild(inFixBox); inFix.appendChild(document.createTextNode("Include in the fix prompt")); fb.appendChild(inFix);
+    if (s.causes && s.causes.length) {
+      fb.appendChild(el("span", "hint", "Suspected causes. Tick the ones that match what you saw:"));
+      s.causes.forEach(function (c, i) {
+        var lab = el("label"); var box = el("input"); box.type = "checkbox"; box.dataset.i = i;
+        box.addEventListener("change", function () {
+          var list = (state.causes[s.id] || []).filter(function (x) { return x !== i; });
+          if (box.checked) list.push(i);
+          state.causes[s.id] = list; save();
+        });
+        lab.appendChild(box); lab.appendChild(document.createTextNode(c)); fb.appendChild(lab);
+      });
+    }
+    card.appendChild(fb);
+    var ta = el("textarea"); ta.placeholder = "Notes: what you saw, especially when it didn't match"; ta.setAttribute("aria-label", "Notes for " + stepLabel(s));
+    ta.value = state.notes[s.id] || "";
+    ta.addEventListener("input", function () { state.notes[s.id] = ta.value; save(); });
+    card.appendChild(ta);
+    container.appendChild(card);
+    paintStep(s);
+  }
+
+  function paintStep(s) {
+    var card = cards[s.id], r = resultOf(s.id);
+    if (r) card.dataset.result = r; else delete card.dataset.result;
+    card.querySelectorAll(".result button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === r)); });
+    var fb = card.querySelector('[data-role="failbox"]');
+    fb.hidden = r !== "fail";
+    fb.querySelector('input[type="checkbox"]').checked = state.inFix[s.id] !== false;
+    var chosen = state.causes[s.id] || [];
+    fb.querySelectorAll("input[data-i]").forEach(function (b) { b.checked = chosen.indexOf(Number(b.dataset.i)) >= 0; });
+  }
+
+  var partsEl = document.getElementById("parts");
+  PARTS.forEach(function (p) {
+    var steps = STEPS.filter(function (s) { return s.part === p.id; });
+    var sec = el("section"); sec.id = "part-" + p.id;
+    var gt = el("div", "group-title"); gt.appendChild(el("h2", null, p.title));
+    var nums = steps.map(function (s) { return s.num; }).filter(Boolean);
+    if (nums.length) gt.appendChild(el("span", "count", nums.length > 1 ? nums[0] + "–" + nums[nums.length - 1] : nums[0]));
+    if (p.kind !== "cleanup") {
+      var lab = el("label"); var box = el("input"); box.type = "checkbox"; box.checked = state.runParts[p.id] !== false;
+      box.addEventListener("change", function () { state.runParts[p.id] = box.checked; save(); });
+      lab.appendChild(box); lab.appendChild(document.createTextNode("In run prompt")); gt.appendChild(lab);
+    }
+    sec.appendChild(gt);
+    if (p.needsHtml) { var n = rich("p", "needs", "<b>Needs:</b> " + p.needsHtml); sec.appendChild(n); }
+    var list = el("div", "steps"); sec.appendChild(list);
+    steps.forEach(function (s) { renderStep(s, list); });
+    partsEl.appendChild(sec);
+  });
+
+  function fillTable(id, rows, keys) {
+    if (!rows || !rows.length) return;
+    var sec = document.getElementById(id); sec.hidden = false;
+    var tb = sec.querySelector("tbody");
+    rows.forEach(function (r) { var tr = el("tr"); keys.forEach(function (k) { tr.appendChild(rich("td", null, r[k])); }); tb.appendChild(tr); });
+  }
+  fillTable("dryRunFindings", P.dryRunFindings, ["whatHtml", "whereHtml", "impactHtml"]);
+  fillTable("trouble", P.troubleshooting, ["seeHtml", "causeHtml", "fixHtml"]);
+
+  // Values panel
+  var fieldsEl = document.getElementById("fields");
+  FIELDS.forEach(function (f) {
+    var wrap = el("div", "field");
+    var lab = el("label", null, f.label); lab.htmlFor = "field-" + f.id;
+    var input = el("input"); input.id = "field-" + f.id; input.value = state.values[f.id] || "";
+    input.placeholder = defaultOf(f) || (f.from ? "from " + f.from : "");
+    input.addEventListener("input", function () { state.values[f.id] = input.value; save(); renderDynamic(); });
+    wrap.appendChild(lab); wrap.appendChild(input);
+    if (f.hint) wrap.appendChild(el("small", null, f.hint));
+    fieldsEl.appendChild(wrap);
+  });
+
+  function renderDynamic() {
+    codeBlocks.forEach(function (b) { b.node.textContent = fill(b.text); });
+    textBlocks.forEach(function (b) { b.node.textContent = fill(b.text); });
+  }
+
+  function failedForFix() {
+    return STEPS.filter(function (s) { return resultOf(s.id) === "fail" && state.inFix[s.id] !== false; });
+  }
+  function updateProgress() {
+    var c = { pass: 0, fail: 0, skip: 0 }, total = 0;
+    STEPS.forEach(function (s) { if (!counted(s)) return; total++; var r = resultOf(s.id); if (r) c[r]++; });
+    var run = c.pass + c.fail + c.skip;
+    document.getElementById("progress").textContent = run + " of " + total + " steps recorded: " + c.pass + " pass, " + c.fail + " fail, " + c.skip + " skip";
+    document.getElementById("copyFix").textContent = "Copy fix prompt (" + failedForFix().length + ")";
+  }
+
+  // Text exports
+  function cell(t) { return String(t || "").replace(/\r?\n/g, " ").replace(/\|/g, "\\|"); }
+  function heads() {
+    return (M.repos || []).map(function (r) { return r.name + " " + r.branch + " at " + r.head + " against " + r.base + " (merge-base " + r.mergeBase + ")" + (r.uncommitted ? ", including uncommitted changes" : ""); });
+  }
+  function valueLines() {
+    return FIELDS.map(function (f) {
+      var v = String(state.values[f.id] || "").trim();
+      var shown = v || (defaultOf(f) ? defaultOf(f) + " (default)" : f.from ? "not captured yet: take it from step " + f.from : "not set");
+      return "- " + f.label + " <" + f.id + ">: " + shown;
+    });
+  }
+  function stepBody(s, indent) {
+    var out = [];
+    if (s.why) out.push(indent + "Proves: " + fill(s.why));
+    if (s.cmds && s.cmds.length) {
+      out.push(indent + "Commands:");
+      s.cmds.forEach(function (c) {
+        out.push(indent + "  [" + c.term + "]");
+        fill(c.text).split("\n").forEach(function (l) { out.push(indent + "    " + l); });
+      });
+    }
+    if (s["do"] && s["do"].length) {
+      out.push(indent + "Do:");
+      s["do"].forEach(function (d, i) { out.push(indent + "  " + (i + 1) + ". " + fill(d)); });
+    }
+    out.push(indent + "Expect:");
+    (s.expect || []).forEach(function (x) { out.push(indent + "  - " + fill(x)); });
+    return out;
+  }
+  function title() { return (M.ticket && M.ticket.key ? M.ticket.key + " " : "") + M.title; }
+
+  function resultsMarkdown() {
+    var c = { pass: 0, fail: 0, skip: 0 }, total = 0;
+    STEPS.forEach(function (s) { if (!counted(s)) return; total++; var r = resultOf(s.id); if (r) c[r]++; });
+    var lines = ["## " + title() + ": results " + new Date().toISOString().slice(0, 10), ""];
+    heads().forEach(function (h) { lines.push("- " + h); });
+    lines.push("- Pass " + c.pass + ", fail " + c.fail + ", skip " + c.skip + ", not run " + (total - c.pass - c.fail - c.skip) + " of " + total + " steps");
+    lines.push("", "| Step | Title | Result | Notes |", "|---|---|---|---|");
+    STEPS.forEach(function (s) {
+      if (!counted(s)) return;
+      lines.push("| " + cell(s.num || "") + " | " + cell(s.title) + " | " + (resultOf(s.id) || "not run") + " | " + cell(state.notes[s.id]) + " |");
+    });
+    return lines.join("\n");
+  }
+
+  function runPrompt() {
+    var parts = PARTS.filter(function (p) { return p.kind !== "cleanup" && state.runParts[p.id] !== false; });
+    if (!parts.length) return "";
+    var L = [];
+    L.push("Run the local test plan below and report the result of every step. Plan: " + title() + ".");
+    heads().forEach(function (h) { L.push("Code under test: " + h + "."); });
+    L.push("");
+    L.push("Rules:");
+    L.push("- Run everything on this machine against the local services named below. Never connect to a remote or production host, never deploy, never commit or push.");
+    L.push("- Do not change application code or env files. Start services with the overrides the commands show.");
+    L.push("- A step passes only when every Expect line matches. Quote the exact log line or value you saw.");
+    L.push("- When a step fails, record it and continue. Mark later steps in the same part that depend on it as blocked. Run each part's reset step even when the part failed.");
+    L.push("- Replace each <name> placeholder with the value captured from the step named under Values.");
+    L.push("- Never print secrets (tokens, passwords, credentials, private links) in your report.");
+    L.push("- Do not fix anything. Report only.");
+    L.push("");
+    L.push("Report: a table of Step | Result (pass, fail, skip, blocked) | What you saw. Then, for each failed step, your best guess at the cause with the evidence.");
+    L.push("");
+    L.push("Environment: " + (M.env || "see the notes below"));
+    if (M.agentNotes) L.push("Running interactive steps headless: " + M.agentNotes);
+    if (M.terminals && M.terminals.length) L.push("Terminals: " + M.terminals.map(function (t) { return t.id + " = " + t.what; }).join("; ") + ".");
+    (P.notes || []).forEach(function (n) { L.push("Note: " + (n.title ? n.title + " " : "") + plain(n.html)); });
+    if (FIELDS.length) { L.push("", "Values:"); L = L.concat(valueLines()); }
+    parts.forEach(function (p) {
+      L.push("", "## " + p.title);
+      if (p.needsHtml) L.push("Needs: " + plain(p.needsHtml));
+      STEPS.filter(function (s) { return s.part === p.id; }).forEach(function (s) {
+        L.push("", "### " + stepLabel(s) + (s.reset ? " (reset)" : ""));
+        L = L.concat(stepBody(s, ""));
+      });
+    });
+    if (P.troubleshooting && P.troubleshooting.length) {
+      L.push("", "## Known problems");
+      P.troubleshooting.forEach(function (t) { L.push("- You see: " + plain(t.seeHtml) + ". Cause: " + plain(t.causeHtml) + ". Fix: " + plain(t.fixHtml)); });
+    }
+    return L.join("\n");
+  }
+
+  function fixPrompt() {
+    var todo = failedForFix();
+    if (!todo.length) return "";
+    var L = [];
+    L.push("Diagnose the failed local test steps below. Plan: " + title() + ".");
+    heads().forEach(function (h) { L.push("Plan built for: " + h + "."); });
+    L.push("Locate code by file and symbol, not by line number, because the branch may have moved since the plan was built.");
+    L.push("");
+    L.push("For each failed step:");
+    L.push("1. Reproduce it: run the setup its part needs, then its commands as written, and confirm you see the same result I describe.");
+    L.push("2. Find the root cause in the code it covers. Follow the call path to the condition that decides the outcome; don't stop at the first plausible line.");
+    L.push("3. Decide whether the code or the test step is wrong. If the step's command or expectation is wrong, say so and give the corrected step instead of changing code.");
+    L.push("4. Propose the fix with evidence: file, symbol, the failing condition and what you ran. Wait for my approval before editing any file.");
+    L.push("Run everything locally only. Never commit or push. Follow the repo's CLAUDE.md and AGENTS.md.");
+    L.push("");
+    L.push("Environment: " + (M.env || "see the test plan"));
+    if (M.agentNotes) L.push("Running interactive steps headless: " + M.agentNotes);
+    if (FIELDS.length) { L.push("Values from my run:"); L = L.concat(valueLines()); }
+    todo.forEach(function (s, i) {
+      var p = PART[s.part];
+      L.push("", (i + 1) + ". " + stepLabel(s) + " (" + p.title + ")");
+      var scope = (P.coverage || []).filter(function (c) { return (c.steps || []).indexOf(s.id) >= 0; }).map(function (c) { return c.item; });
+      if (scope.length) L.push("   Ticket scope: " + scope.join("; "));
+      if (p.needsHtml) L.push("   Needs: " + plain(p.needsHtml));
+      L = L.concat(stepBody(s, "   "));
+      var note = String(state.notes[s.id] || "").trim();
+      L.push("   What I saw: " + (note ? note.replace(/\s*\n\s*/g, " ") : "no notes recorded; ask me before guessing"));
+      var others = STEPS.filter(function (o) { return o.part === s.part && o.id !== s.id; }).map(function (o) { return (o.num || o.title) + " " + (resultOf(o.id) || "not run"); });
+      if (others.length) L.push("   Other results in this part: " + others.join(", "));
+      if (s.covers && s.covers.length) L.push("   Code it covers: " + s.covers.map(function (c) { return (c.repo ? c.repo + ": " : "") + c.file + (c.symbol ? " (" + c.symbol + ")" : ""); }).join("; "));
+      var causes = s.causes || [];
+      var chosen = (state.causes[s.id] || []).filter(function (k) { return causes[k]; }).map(function (k) { return causes[k]; });
+      if (chosen.length) L.push("   Suspected causes I ticked: " + chosen.join(" | ") + ". Check these first, then confirm or rule them out with evidence.");
+      else if (causes.length) L.push("   Suspected causes from the plan, none confirmed: " + causes.join(" | ") + ". Check these first, but don't assume any of them.");
+    });
+    return L.join("\n");
+  }
+
+  var box = document.getElementById("promptBox"), boxText = document.getElementById("boxText"), boxTitle = document.getElementById("boxTitle");
+  function exportText(label, text, btn, emptyMsg) {
+    if (!text) { box.hidden = false; boxTitle.textContent = label; boxText.value = emptyMsg; return; }
+    box.hidden = false; boxTitle.textContent = label; boxText.value = text;
+    var orig = btn.textContent;
+    function done(t) { btn.textContent = t; setTimeout(function () { btn.textContent = orig; updateProgress(); }, 1400); }
+    function fallback() { boxText.focus(); boxText.select(); done("Copy blocked: select the text below"); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done("Copied"); }, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+  var bResults = document.getElementById("copyResults"), bRun = document.getElementById("copyRun"), bFix = document.getElementById("copyFix");
+  bResults.addEventListener("click", function () { exportText("Results", resultsMarkdown(), bResults, ""); });
+  bRun.addEventListener("click", function () { exportText("Run prompt", runPrompt(), bRun, "No part is ticked 'In run prompt'."); });
+  bFix.addEventListener("click", function () { exportText("Fix prompt", fixPrompt(), bFix, "No failed step is included. Mark a step Fail to add it."); });
+  document.getElementById("boxClose").addEventListener("click", function () { box.hidden = true; });
+
+  var clearBtn = document.getElementById("clearBtn"), armed = false;
+  clearBtn.addEventListener("click", function () {
+    if (!armed) { armed = true; clearBtn.textContent = "Click again to clear everything"; setTimeout(function () { armed = false; clearBtn.textContent = "Clear results and values"; }, 3000); return; }
+    armed = false; clearBtn.textContent = "Clear results and values";
+    state = { values: {}, results: {}, notes: {}, causes: {}, inFix: {}, runParts: {} }; save();
+    document.querySelectorAll("#fields input").forEach(function (i) { i.value = ""; });
+    document.querySelectorAll(".step textarea").forEach(function (t) { t.value = ""; });
+    document.querySelectorAll(".group-title input").forEach(function (b) { b.checked = true; });
+    STEPS.forEach(paintStep); renderDynamic(); updateProgress();
+  });
+
+  renderDynamic();
+  updateProgress();
+})();
+</script>
